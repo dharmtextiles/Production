@@ -1,0 +1,947 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Production Payment Calculator</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1f5eff">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--ink:#1c2230;--mut:#667085;--line:#e3e6eb;--acc:#1f5eff;--accbg:#e8efff;--ok:#0f8a4f;--bad:#c62828;--warn:#b26a00;--head:#eef1f6;--tot:#fff7e0;--avg:#e9f6ee}
+@media (prefers-color-scheme:dark){:root{--bg:#12151b;--card:#1b2029;--ink:#e8ebf0;--mut:#9aa4b2;--line:#2c3340;--acc:#6b9bff;--accbg:#22304f;--ok:#4cc98a;--bad:#ff7b7b;--warn:#f0b04a;--head:#232a36;--tot:#3a3217;--avg:#1b3327}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1250px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0 12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.n{background:var(--acc);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-grid;place-items:center;font-size:12px}
+label{display:block;font-size:12px;color:var(--mut);margin-bottom:3px}
+input,select,button{font:inherit;color:var(--ink)}
+input[type=text],input[type=date],input[type=number],select{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%}
+input:focus,select:focus{outline:2px solid var(--acc);outline-offset:-1px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.row>div{flex:1 1 160px}
+button{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:8px 14px;cursor:pointer}
+button.ghost{background:var(--accbg);color:var(--acc)}
+button.x{background:transparent;color:var(--bad);padding:4px 8px}
+.tabs{display:flex;gap:6px;margin-bottom:14px}
+.tab{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+.tab.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.hint{font-size:12px;color:var(--mut);margin-top:6px}
+.err{color:var(--bad);font-size:12px;margin-top:4px}
+.ok{color:var(--ok);font-size:13px}
+.vbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.vbar select{width:auto}
+button.mic.on{background:var(--bad);animation:pulse 1.2s infinite}
+@keyframes pulse{50%{opacity:.7}}
+#vstat{font-size:13px;color:var(--mut)}
+#grid.voice input{caret-color:transparent}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;table-layout:auto}
+th,td{padding:4px 6px;text-align:right;border-bottom:1px solid var(--line);border-right:1px solid var(--line);white-space:nowrap}
+th{background:var(--head);font-weight:600}
+td:first-child,th:first-child{text-align:left}
+#grid td.in{padding:0}
+#grid input{width:100%;min-width:34px;border:0;border-radius:0;background:transparent;text-align:right;padding:6px 4px;font-variant-numeric:tabular-nums}
+#grid input.hi{background:#ffd9a0;color:#5a3200}
+#grid input.vhi{background:#e53935;color:#fff}
+#grid input:focus{background:var(--accbg);outline:2px solid var(--acc);outline-offset:-2px}
+tr.tot td{background:var(--tot);font-weight:700}
+tr.avg td{background:var(--avg);font-weight:600}
+tr.cnt td,td.tc,th.tc{background:var(--head);font-weight:600}
+tr.eff td{background:var(--accbg);font-weight:600}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:3px 11px;font-size:13px;cursor:pointer}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.rule{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
+.rule .res{margin-top:10px;font-weight:600;display:flex;gap:18px;flex-wrap:wrap}
+.warn{background:#fff4e0;color:var(--warn);border:1px solid #f1d6a4;border-radius:8px;padding:8px 10px;margin:8px 0;font-size:13px}
+@media (prefers-color-scheme:dark){.warn{background:#3a2d12;border-color:#5a4720}}
+.sum{display:grid;grid-template-columns:1fr auto;gap:6px 24px;max-width:480px;margin-left:auto}
+.sum div:nth-child(odd){color:var(--mut)}
+.sum div:nth-child(even){text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.sum .big{font-size:20px;color:var(--ink)!important;font-weight:700}
+.sum .rem{color:var(--ok)!important}
+.ent{display:flex;gap:8px;margin-bottom:6px}
+.ent input:first-child{flex:2}.ent input:nth-child(2){flex:1}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.tag{font-size:12px;color:var(--mut);font-weight:400}
+.saved{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.saved:last-child{border:0}
+.saved .t{flex:1 1 220px}
+.kpis{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.kpi{flex:1 1 150px;background:var(--head);border-radius:10px;padding:10px 14px}
+.kpi b{display:block;font-size:20px}
+.kpi span{font-size:12px;color:var(--mut)}
+@media (max-width:700px){th,td{padding:3px 3px;font-size:11px}#grid input{font-size:11px;padding:5px 1px;min-width:24px}}
+@media print{body{background:#fff;color:#000}.noprint{display:none!important}.card{break-inside:avoid;border-color:#ccc}.tw{overflow:visible}}
+
+/* ---- photo import ---- */
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);padding:0;max-width:none}
+dialog::backdrop{background:rgba(0,0,0,.55)}
+#impDlg{width:min(1200px,97vw);height:94vh}
+#impDlg[open]{display:flex;flex-direction:column}
+.dh{padding:10px 14px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.dh .fld{flex:0 0 auto}.dh .fld select,.dh .fld input{width:auto}
+.dh input[type=number]{width:84px}
+.dbody{flex:1;min-height:0;display:grid;grid-template-columns:minmax(200px,36%) 1fr}
+.pane{overflow:auto;min-height:0;position:relative}
+#impPhoto{background:var(--head);border-right:1px solid var(--line)}
+.ptools{position:sticky;top:0;left:0;z-index:3;display:flex;gap:6px;align-items:center;padding:6px;background:var(--head)}
+.ptools button{padding:4px 10px}
+#impImg{display:block;max-width:none;height:auto}
+.df{padding:10px 14px;border-top:1px solid var(--line)}
+#impSum div{font-size:13px;padding:1px 0}
+.imptbl{width:100%}
+.imptbl thead th{position:sticky;top:0;z-index:2;text-align:center;line-height:1.25}
+.imptbl td:first-child{text-align:left;font-weight:600;width:44px}
+.imptbl td.in{padding:0}
+.imptbl input{width:100%;min-width:54px;border:0;border-radius:0;background:transparent;text-align:right;padding:7px 5px;font-variant-numeric:tabular-nums}
+.imptbl input:focus{background:var(--accbg);outline:2px solid var(--acc);outline-offset:-2px}
+.imptbl input.unc{background:#ffe680;color:#4a3b00}
+.imptbl input.nb{background:#ffd9a0;color:#5a3200}
+.imptbl input.vhi{background:#e53935;color:#fff}
+.imptbl input.nm{text-align:left;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-weight:600}
+.imptbl tr.half td{background:var(--accbg);text-align:left;font-weight:600}
+.imptbl tr.half td:first-child{width:auto}
+@media (prefers-color-scheme:dark){.imptbl input.unc{background:#5a4a12;color:#ffe9a0}}
+@media (max-width:800px){
+#impDlg{width:100vw;height:100dvh;max-height:100dvh;border-radius:0;overflow-y:auto}
+#impDlg[open]{display:block}
+.dh{padding:8px 10px;gap:8px}.dh .fld label{font-size:11px}.dh input[type=number]{width:84px}
+.dbody{display:block}
+#impPhoto{height:42vh;border-right:0;border-bottom:1px solid var(--line)}
+#impTbl{overflow:visible}
+.imptbl thead th{top:0}
+.df{padding:10px}
+}
+@media print{dialog{display:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Production Payment Calculator <span class="tag">v5</span></h1>
+<div class="tabs noprint">
+  <button class="tab on" id="tabE">Entry &amp; Payment</button>
+  <button class="tab" id="tabR">Report</button>
+  <button class="tab" id="tabS">Saved entries</button>
+</div>
+
+<!-- ================= ENTRY ================= -->
+<div id="pgE">
+<div class="card">
+  <h2><span class="n">1</span> Operator, date range &amp; machines <span class="tag" id="state"></span></h2>
+  <div class="row">
+    <div><label>Operator name</label><input type="text" id="op" list="ops" placeholder="Enter operator name"><datalist id="ops"></datalist></div>
+    <div><label>From date</label><input type="date" id="dfrom"></div>
+    <div><label>To date</label><input type="date" id="dto"></div>
+    <div style="flex:2 1 260px"><label>Machine numbers (e.g. 1-14 or 1-7,9,12 or 1-14,18,20)</label><input type="text" id="mach" value="1-14"></div>
+  </div>
+  <div class="err" id="merr"></div>
+  <div class="bar" style="margin-top:12px">
+    <button id="save">💾 Save</button>
+    <button class="ghost" id="saveNew">Save as new</button>
+    <button class="ghost" id="newE">New entry</button>
+    <span class="ok" id="msg"></span>
+  </div>
+</div>
+
+<div class="card">
+  <h2><span class="n">2</span> Production entry — type meters in each box <span class="tag" id="meta"></span></h2>
+  <div class="vbar noprint">
+    <button class="ghost" id="impBtn" type="button">📷 Import from photo</button><input type="file" id="impFile" accept="image/*" hidden>
+    <button class="mic ghost" id="mic" type="button">🎤 Voice entry</button>
+    <select id="vlang" title="Speech language"><option value="en-IN">English (India)</option><option value="hi-IN">हिन्दी</option><option value="en-US">English (US)</option></select>
+    <label style="display:flex;gap:6px;align-items:center;margin:0" title="Pause after a number before it jumps to the next row">Pause <input type="number" id="vpause" min="0.2" max="5" step="0.1" style="width:70px"> sec</label>
+    <label style="display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" id="vnext"> next machine at column end</label>
+    <span id="vstat">Tap a box (machine / date), press Voice entry, then speak numbers.</span>
+  </div>
+  <div class="tw"><div id="grid"></div></div>
+  <div class="hint">Voice: say a number → it is filled and the next date opens. Say “skip” / “next” to leave a day blank, “back” to go up, “stop” to finish. You can also say several numbers together (24 25 26). Leave blank for a machine that did not run. Press Enter to move down. Average = machine total ÷ days it ran. Count = machines running that day. Efficiency = production ÷ 100% target (see Report tab for settings).</div>
+</div>
+
+<div class="card">
+  <h2><span class="n">3</span> Rate per meter (by machine &amp; date range)</h2>
+  <div id="rules"></div>
+  <div class="bar noprint"><button class="ghost" id="addrule">+ Add rate</button></div>
+  <div id="rwarn"></div>
+  <h2 style="margin-top:16px">Machine-wise amount</h2>
+  <div class="tw"><div id="mwise"></div></div>
+</div>
+
+<div class="card">
+  <h2><span class="n">4</span> Loss (Khot), advance &amp; final payment</h2>
+  <div class="two">
+    <div>
+      <label>Loss (Khot) entries</label>
+      <div id="loss"></div>
+      <button class="ghost noprint" id="addloss">+ Add loss</button>
+      <div style="margin-top:10px"><label>Loss is…</label>
+        <select id="lossmode"><option value="add">Added to total (as entered)</option><option value="sub">Deducted from total</option></select></div>
+    </div>
+    <div>
+      <label>Advance entries</label>
+      <div id="adv"></div>
+      <button class="ghost noprint" id="addadv">+ Add advance</button>
+      <div style="margin-top:10px"><label>Last payment date</label><input type="date" id="paydate"></div>
+    </div>
+  </div>
+  <hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
+  <div class="sum" id="summary"></div>
+  <div class="hint" style="text-align:right">Payment is rounded to 10: last digit 1-5 → 0, 6-9 → next 10.</div>
+</div>
+<div class="bar noprint"><button id="print">Print / Save PDF</button></div>
+</div>
+
+<!-- ================= REPORT ================= -->
+<div id="pgR" hidden>
+<div class="card noprint">
+  <h2>Report filter</h2>
+  <div class="row">
+    <div><label>From date</label><input type="date" id="rfrom"></div>
+    <div><label>To date</label><input type="date" id="rto"></div>
+    <div><label>Operator</label><select id="rop"></select></div>
+  </div>
+  <div class="hint">Report is built from saved entries. Save an entry first for it to appear here.</div>
+</div>
+<div class="card noprint">
+  <h2>Efficiency settings <span class="tag">(from your Excel sheet)</span></h2>
+  <div class="row">
+    <div><label>RPM</label><input type="number" id="s_rpm" step="any"></div>
+    <div><label>Hour × Minute (per day)</label><input type="number" id="s_min" step="any"></div>
+    <div><label>Pick</label><input type="number" id="s_pick" step="any"></div>
+    <div><label>Inch in one meter</label><input type="number" id="s_inch" step="any"></div>
+  </div>
+  <div class="hint" id="s_note"></div>
+</div>
+<div id="report"></div>
+<div class="bar noprint"><button id="printR">Print / Save PDF</button></div>
+</div>
+
+<!-- ================= SAVED ================= -->
+<div id="pgS" hidden>
+<div class="card"><h2>Saved entries</h2><div class="ok" id="savedMsg" style="margin-bottom:8px"></div><div id="savedList"></div></div>
+</div>
+</div>
+
+<dialog id="impDlg">
+  <div class="dh" style="align-items:center">
+    <b style="font-size:16px">📷 Import production from photo</b>
+    <span class="tag" id="impStat" style="flex:1 1 220px"></span>
+    <button class="ghost" id="impSet" type="button">⚙ AI key</button>
+    <button class="ghost" id="impClose" type="button">✕ Close</button>
+  </div>
+  <div class="dh">
+    <div class="fld"><label>Month of sheet</label><select id="impMon"><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
+    <div class="fld"><label>Year</label><input type="number" id="impYr" min="2000" max="2100"></div>
+    <div class="fld"><label>Machine – left block</label><input type="number" id="impM0" min="1"></div>
+    <div class="fld"><label>Machine – right block</label><input type="number" id="impM1" min="1"></div>
+    <button id="impScan" type="button">🔄 Read photo with AI</button>
+  </div>
+  <div class="dbody">
+    <div class="pane" id="impPhoto">
+      <div class="ptools"><button class="ghost" id="impZm" type="button">−</button><span id="impZv" class="tag">120%</span><button class="ghost" id="impZp" type="button">+</button><button class="ghost" id="impRot" type="button">⟳ Rotate</button></div>
+      <img id="impImg" alt="Sheet photo">
+    </div>
+    <div class="pane" id="impTbl"></div>
+  </div>
+  <div class="df">
+    <div id="impSum"></div>
+    <div class="err" id="impErr"></div>
+    <div class="bar" style="margin-top:8px"><button id="impSave" type="button">Save</button><button class="ghost" id="impCancel" type="button">Cancel</button>
+    <span class="hint" style="margin:0">Yellow = AI was unsure · orange = not a number · red = over 50 m. Compare with the photo, fix anything wrong, then save.</span></div>
+  </div>
+</dialog>
+
+<dialog id="aiDlg">
+  <div style="padding:16px;width:min(480px,92vw)">
+    <h2 style="margin:0 0 10px;font-size:16px">AI reading settings</h2>
+    <div class="row">
+      <div><label>Service</label><select id="aiProv"><option value="gemini">Google Gemini</option><option value="claude">Anthropic Claude</option></select></div>
+    </div>
+    <div style="margin-top:10px"><label>API key</label><input type="text" id="aiKey" autocomplete="off" spellcheck="false" placeholder="paste your API key"></div>
+    <div style="margin-top:10px"><label>Model (leave blank for default)</label><input type="text" id="aiModel" autocomplete="off" spellcheck="false"></div>
+    <div class="hint" id="aiHelp"></div>
+    <div class="hint">The key is saved only in this browser on this device and is sent only to the service you choose. Anyone using this browser can see it, so use it on your own phone / PC.</div>
+    <div class="bar" style="margin-top:12px"><button id="aiSave" type="button">Save</button><button class="ghost" id="aiCancel" type="button">Cancel</button></div>
+  </div>
+</dialog>
+
+<script>
+const PW='vikram';
+const $=id=>document.getElementById(id);
+const fmt=(n,d=0)=>Number(n).toLocaleString('en-IN',{minimumFractionDigits:d,maximumFractionDigits:d});
+const f2=n=>fmt(n,n%1?2:0);
+const money=n=>'₹ '+fmt(n,2);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const dshow=iso=>{if(!iso)return '–';const [y,m,d]=iso.split('-');return d+'-'+m+'-'+y.slice(2)};
+const todayIso=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+
+/* storage (falls back to memory if blocked) */
+const mem={};
+const store={get(k,def){try{const v=localStorage.getItem(k);return v?JSON.parse(v):def}catch(e){return k in mem?mem[k]:def}},
+             set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){mem[k]=v}}};
+let records=store.get('ppc_records',[]);
+let settings=Object.assign({rpm:130,min:1440,pick:68,inch:39.37,heads:1},store.get('ppc_settings',{}));
+
+/* round to 10: last digit 1-5 ->0, 6-10 -> up */
+const round10=x=>{x=Math.round(x*100)/100;return Math.ceil((x-5)/10-1e-9)*10+0};
+
+/* ---------- current entry ---------- */
+let cur=blank(), dirty=false;
+function blank(){
+  const t=todayIso(),d=new Date();d.setDate(d.getDate()-14);
+  const s=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  return {id:null,op:'',from:s,to:t,mach:'1-14',prod:{},rules:[{rate:'2.2',from:'',to:'',set:null}],loss:[{t:'',a:''}],adv:[{t:'',a:''}],lossmode:'add',paydate:''};
+}
+function parseMachines(s){
+  const out=[],seen=new Set();let err='';
+  for(const tok of s.split(/[,\s]+/).filter(Boolean)){
+    const m=tok.match(/^(\d+)(?:\s*-\s*(\d+))?$/);
+    if(!m){err='Cannot read "'+tok+'"';continue}
+    let a=+m[1],b=m[2]?+m[2]:a;if(a>b)[a,b]=[b,a];
+    if(b-a>500){err='Range too large';continue}
+    for(let i=a;i<=b;i++)if(!seen.has(i)){seen.add(i);out.push(i)}
+  }
+  return {list:out,err};
+}
+function daysBetween(f,t){
+  const out=[];if(!f||!t||f>t)return out;
+  let d=new Date(f+'T00:00:00Z');const e=new Date(t+'T00:00:00Z');
+  while(d<=e&&out.length<400){out.push(d.toISOString().slice(0,10));d=new Date(d.getTime()+864e5)}
+  return out;
+}
+const machList=rec=>parseMachines(rec.mach).list;
+const target=()=>settings.rpm*settings.min/(settings.pick*settings.inch)*settings.heads; // 100% meters per machine per day
+const pv=(rec,d,m)=>{const v=parseFloat((rec.prod[d]||{})[m]);return isNaN(v)?0:v};
+
+/* rates for one record over given day list */
+function ruleSet(r,M){return r.set?new Set(r.set):new Set(M)}
+function calcRates(rec,days){
+  const M=machList(rec);
+  const per=rec.rules.map(()=>({m:0,a:0})),mm=M.map(()=>({m:0,a:0}));
+  let unc=0,dbl=0,total=0;
+  const sets=rec.rules.map(r=>ruleSet(r,M));
+  for(const d of days)M.forEach((m,mi)=>{
+    const v=pv(rec,d,m);if(v<=0)return;let hit=0;
+    rec.rules.forEach((ru,ri)=>{
+      if(!sets[ri].has(m))return;if(ru.from&&d<ru.from)return;if(ru.to&&d>ru.to)return;
+      const rate=parseFloat(ru.rate);if(isNaN(rate))return;
+      hit++;per[ri].m+=v;per[ri].a+=v*rate;mm[mi].m+=v;mm[mi].a+=v*rate;total+=v*rate;
+    });
+    if(hit===0)unc+=v;if(hit>1)dbl+=v;
+  });
+  return {per,mm,unc,dbl,total,M};
+}
+const sumList=a=>a.reduce((s,e)=>s+(parseFloat(e.a)||0),0);
+
+/* ---------- grid (fillable) ---------- */
+function renderGrid(){
+  const M=machList(cur),days=daysBetween(cur.from,cur.to);
+  let h='<table><thead><tr><th>Date</th>'+M.map(m=>'<th>'+m+'</th>').join('')+'<th class="tc">Total</th><th class="tc">Count</th></tr></thead><tbody>';
+  for(const d of days){
+    h+='<tr><td>'+dshow(d)+'</td>'+M.map((m,mi)=>'<td class="in"><input type="number" inputmode="decimal" step="any" data-d="'+d+'" data-m="'+m+'" data-c="'+mi+'" value="'+esc((cur.prod[d]||{})[m]??'')+'"></td>').join('')+
+      '<td class="tc" data-rt="'+d+'"></td><td class="tc" data-rc="'+d+'"></td></tr>';
+  }
+  h+='<tr class="tot"><td>Total</td>'+M.map((m,i)=>'<td data-mt="'+i+'"></td>').join('')+'<td data-gt></td><td data-cs></td></tr>';
+  h+='<tr class="avg"><td>Average</td>'+M.map((m,i)=>'<td data-ma="'+i+'"></td>').join('')+'<td data-ga></td><td></td></tr>';
+  h+='<tr class="cnt"><td>Days ran</td>'+M.map((m,i)=>'<td data-md="'+i+'"></td>').join('')+'<td data-gd></td><td></td></tr>';
+  h+='<tr class="eff"><td>Efficiency %</td>'+M.map((m,i)=>'<td data-me="'+i+'"></td>').join('')+'<td data-ge></td><td></td></tr>';
+  h+='</tbody></table>';
+  $('grid').innerHTML=days.length&&M.length?h:'<div style="padding:16px;color:var(--mut)">Choose a valid date range and machines.</div>';
+  $('grid').querySelectorAll('input').forEach(inp=>{
+    hiClass(inp);
+    inp.addEventListener('input',()=>{
+      const d=inp.dataset.d,m=inp.dataset.m;
+      (cur.prod[d]=cur.prod[d]||{})[m]=inp.value;hiClass(inp);
+      markDirty();recalcGrid();update(false);
+    });
+    inp.addEventListener('keydown',e=>{
+      if(e.key==='Enter'){e.preventDefault();const all=[...$('grid').querySelectorAll('input[data-c="'+inp.dataset.c+'"]')];const n=all[all.indexOf(inp)+1];if(n){n.focus();n.select()}}
+    });
+    inp.addEventListener('focus',()=>inp.select());
+  });
+  recalcGrid();
+}
+function hiClass(inp){const v=parseFloat(inp.value);inp.classList.toggle('vhi',v>60);inp.classList.toggle('hi',v>50&&v<=60)}
+function askPw(){const p=prompt('Enter password to delete');if(p===null)return false;if(p===PW)return true;alert('Wrong password');return false}
+function recalcGrid(){
+  const M=machList(cur),days=daysBetween(cur.from,cur.to),g=$('grid');
+  if(!days.length||!M.length)return;
+  const mt=M.map(()=>0),md=M.map(()=>0);let grand=0,cs=0,ad=0;
+  for(const d of days){let rt=0,c=0;
+    M.forEach((m,i)=>{const v=pv(cur,d,m);rt+=v;mt[i]+=v;if(v>0){c++;md[i]++}});
+    grand+=rt;cs+=c;if(rt>0)ad++;
+    g.querySelector('[data-rt="'+d+'"]').textContent=rt?f2(rt):'';
+    g.querySelector('[data-rc="'+d+'"]').textContent=rt?c:'';
+  }
+  const T=target();
+  M.forEach((m,i)=>{
+    g.querySelector('[data-mt="'+i+'"]').textContent=f2(mt[i]);
+    g.querySelector('[data-ma="'+i+'"]').textContent=md[i]?fmt(mt[i]/md[i],2):'–';
+    g.querySelector('[data-md="'+i+'"]').textContent=md[i];
+    g.querySelector('[data-me="'+i+'"]').textContent=T?fmt(mt[i]/(T*days.length)*100,1):'–';
+  });
+  g.querySelector('[data-gt]').textContent=f2(grand);
+  g.querySelector('[data-cs]').textContent=cs;
+  g.querySelector('[data-ga]').textContent=ad?fmt(grand/ad,2):'–';
+  g.querySelector('[data-gd]').textContent=ad;
+  g.querySelector('[data-ge]').textContent=T?fmt(grand/(T*days.length*M.length)*100,1):'–';
+  $('meta').textContent='· '+days.length+' days · '+M.length+' machines';
+  cur._grand=grand;
+}
+
+/* ---------- rules UI ---------- */
+function renderRules(){
+  const box=$('rules'),M=machList(cur);box.innerHTML='';
+  cur.rules.forEach((r,i)=>{
+    const set=ruleSet(r,M);
+    const d=document.createElement('div');d.className='rule';
+    d.innerHTML='<div class="row"><div style="flex:0 1 110px"><label>Rs / meter</label><input type="number" step="0.01" min="0" value="'+esc(r.rate)+'" data-k="rate"></div>'+
+      '<div><label>From date (blank = start)</label><input type="date" value="'+r.from+'" data-k="from"></div>'+
+      '<div><label>To date (blank = end)</label><input type="date" value="'+r.to+'" data-k="to"></div>'+
+      '<div style="flex:0 0 auto" class="noprint"><button class="x" data-del>Remove</button></div></div>'+
+      '<label style="margin-top:10px">Machines (click to select) <a href="#" data-all>all</a> · <a href="#" data-none>none</a></label>'+
+      '<div class="chips">'+M.map(m=>'<span class="chip'+(set.has(m)?' on':'')+'" data-m="'+m+'">'+m+'</span>').join('')+'</div>'+
+      '<div class="res" data-res></div>';
+    d.querySelectorAll('input').forEach(inp=>inp.addEventListener('input',()=>{r[inp.dataset.k]=inp.value;markDirty();update(false)}));
+    d.querySelector('[data-del]').onclick=()=>{cur.rules.splice(i,1);markDirty();renderRules();update(false)};
+    d.querySelector('[data-all]').onclick=e=>{e.preventDefault();r.set=null;markDirty();renderRules();update(false)};
+    d.querySelector('[data-none]').onclick=e=>{e.preventDefault();r.set=[];markDirty();renderRules();update(false)};
+    d.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
+      const s=ruleSet(r,M),m=+c.dataset.m;s.has(m)?s.delete(m):s.add(m);r.set=[...s];c.classList.toggle('on');markDirty();update(false)});
+    box.appendChild(d);
+  });
+}
+function renderList(id,arr){
+  const box=$(id);box.innerHTML='';
+  arr.forEach((e,i)=>{
+    const d=document.createElement('div');d.className='ent';
+    d.innerHTML='<input type="text" placeholder="Note / date" value="'+esc(e.t)+'"><input type="number" step="0.01" placeholder="Amount" value="'+esc(e.a)+'"><button class="x noprint">✕</button>';
+    const [t,a]=d.querySelectorAll('input');
+    t.oninput=()=>{e.t=t.value;markDirty()};
+    a.oninput=()=>{e.a=a.value;markDirty();update(false)};
+    d.querySelector('button').onclick=()=>{if(!askPw())return;arr.splice(i,1);if(!arr.length)arr.push({t:'',a:''});renderList(id,arr);markDirty();update(false)};
+    box.appendChild(d);
+  });
+}
+
+/* ---------- summary ---------- */
+function update(){
+  const p=parseMachines($('mach').value);$('merr').textContent=p.err;
+  const days=daysBetween(cur.from,cur.to);
+  const R=calcRates(cur,days);
+  document.querySelectorAll('.rule').forEach((el,i)=>{
+    const x=R.per[i];if(!x)return;
+    el.querySelector('[data-res]').innerHTML='<span>Meters: '+f2(x.m)+'</span><span>Amount: '+money(x.a)+'</span>';
+  });
+  let w='';
+  if(R.unc>0)w+='<div class="warn">⚠ '+f2(R.unc)+' meters are not covered by any rate (check rate dates / machines).</div>';
+  if(R.dbl>0)w+='<div class="warn">⚠ '+f2(R.dbl)+' meters are covered by more than one rate and counted twice.</div>';
+  $('rwarn').innerHTML=w;
+  let tm=0;R.mm.forEach(x=>tm+=x.m);
+  let mh='<table><thead><tr><th>Machine</th><th>Meters</th><th>Amount</th></tr></thead><tbody>';
+  R.M.forEach((m,i)=>mh+='<tr><td>'+m+'</td><td>'+f2(R.mm[i].m)+'</td><td>'+money(R.mm[i].a)+'</td></tr>');
+  mh+='<tr class="tot"><td>Total</td><td>'+f2(tm)+'</td><td>'+money(R.total)+'</td></tr></tbody></table>';
+  $('mwise').innerHTML=mh;
+  let gm=0;for(const d of days)R.M.forEach(m=>gm+=pv(cur,d,m));
+  const L=sumList(cur.loss),A=sumList(cur.adv),sub=cur.lossmode==='sub';
+  const raw=R.total+(sub?-L:L),tot=round10(raw),remRaw=tot-A,rem=round10(remRaw);
+  $('summary').innerHTML=
+    '<div>Total meters</div><div>'+f2(gm)+'</div>'+
+    '<div>Total (rate amount)</div><div>'+money(R.total)+'</div>'+
+    '<div>Loss (Khot) '+(sub?'(−)':'(+)')+'</div><div>'+(sub?'− ':'+ ')+money(L)+'</div>'+
+    '<div>Total payment (exact '+fmt(raw,2)+')</div><div class="big">'+money(tot)+'</div>'+
+    '<div>Advance paid (−)</div><div>− '+money(A)+'</div>'+
+    '<div>Last payment date</div><div>'+dshow(cur.paydate)+'</div>'+
+    '<div>Remaining to pay</div><div class="big rem">'+money(rem)+'</div>';
+}
+
+/* ---------- save / load ---------- */
+function markDirty(){dirty=true;$('state').textContent=cur.id?'· unsaved changes':'· not saved yet';$('msg').textContent=''}
+function clean(rec){const c=JSON.parse(JSON.stringify(rec));delete c._grand;return c}
+function doSave(asNew){
+  if(!cur.op.trim()){$('msg').textContent='';$('merr').textContent='Enter operator name before saving.';$('op').focus();return}
+  if(asNew||!cur.id)cur.id='r'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  cur.saved=new Date().toISOString();
+  const c=clean(cur),i=records.findIndex(r=>r.id===c.id);
+  if(i>=0)records[i]=c;else records.push(c);
+  store.set('ppc_records',records);dirty=false;
+  $('state').textContent='· saved';$('msg').textContent='Saved ✓ ('+records.length+' entries stored)';
+  fillOps();
+}
+function loadRec(id){
+  const r=records.find(x=>x.id===id);if(!r)return;
+  cur=JSON.parse(JSON.stringify(r));dirty=false;fillForm();showTab('E');
+}
+function fillForm(){
+  $('op').value=cur.op;$('dfrom').value=cur.from;$('dto').value=cur.to;$('mach').value=cur.mach;
+  $('lossmode').value=cur.lossmode;$('paydate').value=cur.paydate;
+  $('state').textContent=cur.id?'· saved':'· not saved yet';$('msg').textContent='';
+  renderGrid();renderRules();renderList('loss',cur.loss);renderList('adv',cur.adv);update();
+}
+function fillOps(){
+  const names=[...new Set(records.map(r=>r.op))].sort();
+  $('ops').innerHTML=names.map(n=>'<option value="'+esc(n)+'">').join('');
+}
+function renderSaved(){
+  const box=$('savedList');
+  if(!records.length){box.innerHTML='<div style="color:var(--mut)">Nothing saved yet.</div>';return}
+  const sorted=[...records].sort((a,b)=>(b.saved||'')>(a.saved||'')?1:-1);
+  box.innerHTML=sorted.map(r=>{
+    const days=daysBetween(r.from,r.to);let m=0;const M=machList(r);days.forEach(d=>M.forEach(x=>m+=pv(r,d,x)));
+    return '<div class="saved"><div class="t"><b>'+esc(r.op)+'</b><br><span class="tag">'+dshow(r.from)+' to '+dshow(r.to)+' · machines '+esc(r.mach)+' · '+f2(m)+' m</span></div>'+
+      '<button class="ghost" data-open="'+r.id+'">Open</button><button class="x" data-del="'+r.id+'">Delete</button></div>';
+  }).join('');
+  box.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>loadRec(b.dataset.open));
+  box.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+    if(!askPw())return;
+    records=records.filter(r=>r.id!==b.dataset.del);store.set('ppc_records',records);if(cur.id===b.dataset.del)cur.id=null;fillOps();renderSaved()
+  });
+}
+
+/* ---------- report ---------- */
+function reportOps(){
+  const sel=$('rop'),keep=sel.value;
+  const names=[...new Set(records.map(r=>r.op))].sort();
+  sel.innerHTML='<option value="">All operators</option>'+names.map(n=>'<option>'+esc(n)+'</option>').join('');
+  sel.value=names.includes(keep)?keep:'';
+}
+function renderReport(){
+  const T=target();
+  $('s_note').textContent='100% production per machine no. per day = RPM × minutes ÷ (Pick × inch per meter)  = '+fmt(T,2)+' m. Efficiency = production ÷ (this × number of machines × days), same as your Excel (100% at 130 RPM, 68 pick).';
+  const f=$('rfrom').value,t=$('rto').value,op=$('rop').value;
+  const groups={},mach={},daily={};let totalAmt=0,totalProd=0,entries=0;
+  for(const rec of records){
+    if(op&&rec.op!==op)continue;
+    const days=daysBetween(rec.from,rec.to).filter(d=>(!f||d>=f)&&(!t||d<=t));
+    if(!days.length)continue;entries++;
+    const M=machList(rec),R=calcRates(rec,days);
+    const g=groups[rec.op]=groups[rec.op]||{n:0,days:new Set(),md:0,prod:0,amt:0,mset:new Set()};
+    g.n++;g.md+=days.length*M.length;g.amt+=R.total;totalAmt+=R.total;
+    M.forEach((m,mi)=>{
+      g.mset.add(m);
+      const x=mach[m]=mach[m]||{prod:0,ran:0,dates:new Set()};
+      for(const d of days){const v=pv(rec,d,m);x.dates.add(d);g.days.add(d);
+        g.prod+=v;x.prod+=v;totalProd+=v;if(v>0)x.ran++;
+        const dd=daily[d]=daily[d]||{prod:0,run:0};dd.prod+=v;if(v>0)dd.run++;}
+    });
+  }
+  const names=Object.keys(groups).sort();
+  if(!names.length){$('report').innerHTML='<div class="card" style="color:var(--mut)">No saved production in this selection.</div>';return}
+  const dts=Object.keys(daily).sort();
+  let totMD=0;names.forEach(n=>totMD+=groups[n].md);
+  let h='<div class="card"><h2>Production report — '+(f||dts[0]?dshow(f||dts[0]):'')+' to '+dshow(t||dts[dts.length-1])+' · '+(op?esc(op):'All operators')+'</h2>'+
+    '<div class="kpis"><div class="kpi"><b>'+f2(totalProd)+' m</b><span>Total production</span></div>'+
+    '<div class="kpi"><b>'+(T&&totMD?fmt(totalProd/(T*totMD)*100,1)+'%':'–')+'</b><span>Efficiency</span></div>'+
+    '<div class="kpi"><b>'+money(totalAmt)+'</b><span>Rate amount</span></div>'+
+    '<div class="kpi"><b>'+names.length+'</b><span>Operator(s) · '+entries+' entries</span></div></div>';
+  h+='<h2>Operator wise</h2><div class="tw"><table><thead><tr><th>Operator</th><th>Entries</th><th>Days</th><th>Machines</th><th>Production (m)</th><th>Avg / day</th><th>100% target</th><th>Efficiency %</th><th>Amount</th></tr></thead><tbody>';
+  names.forEach(n=>{const g=groups[n],tg=T*g.md;
+    h+='<tr><td>'+esc(n)+'</td><td>'+g.n+'</td><td>'+g.days.size+'</td><td>'+g.mset.size+'</td><td>'+f2(g.prod)+'</td><td>'+fmt(g.prod/g.days.size,2)+'</td><td>'+fmt(tg,0)+'</td><td>'+(tg?fmt(g.prod/tg*100,1):'–')+'</td><td>'+money(g.amt)+'</td></tr>'});
+  h+='<tr class="tot"><td>Total</td><td></td><td></td><td></td><td>'+f2(totalProd)+'</td><td></td><td>'+fmt(T*totMD,0)+'</td><td>'+(T&&totMD?fmt(totalProd/(T*totMD)*100,1):'–')+'</td><td>'+money(totalAmt)+'</td></tr></tbody></table></div>';
+  const ms=Object.keys(mach).map(Number).sort((a,b)=>a-b);
+  h+='<h2 style="margin-top:18px">Machine wise</h2><div class="tw"><table><thead><tr><th>Machine</th><th>Production (m)</th><th>Days ran</th><th>Average (per day ran)</th><th>100% target</th><th>Efficiency %</th></tr></thead><tbody>';
+  let tt=0;ms.forEach(m=>{const x=mach[m],tg=T*x.dates.size;tt+=tg;
+    h+='<tr><td>'+m+'</td><td>'+f2(x.prod)+'</td><td>'+x.ran+'</td><td>'+(x.ran?fmt(x.prod/x.ran,2):'–')+'</td><td>'+fmt(tg,0)+'</td><td>'+(tg?fmt(x.prod/tg*100,1):'–')+'</td></tr>'});
+  h+='<tr class="tot"><td>Total</td><td>'+f2(totalProd)+'</td><td></td><td></td><td>'+fmt(tt,0)+'</td><td>'+(tt?fmt(totalProd/tt*100,1):'–')+'</td></tr></tbody></table></div>';
+  h+='<h2 style="margin-top:18px">Day wise</h2><div class="tw"><table><thead><tr><th>Date</th><th>Production (m)</th><th>Machines running</th></tr></thead><tbody>';
+  dts.forEach(d=>h+='<tr><td>'+dshow(d)+'</td><td>'+f2(daily[d].prod)+'</td><td>'+daily[d].run+'</td></tr>');
+  h+='<tr class="tot"><td>Total</td><td>'+f2(totalProd)+'</td><td>'+dts.reduce((s,d)=>s+daily[d].run,0)+'</td></tr></tbody></table></div></div>';
+  $('report').innerHTML=h;
+}
+function setSettings(){
+  [['rpm','s_rpm'],['min','s_min'],['pick','s_pick'],['inch','s_inch']].forEach(([k,id])=>$(id).value=settings[k]);
+}
+
+/* ---------- tabs ---------- */
+function showTab(k){
+  if(k!=='S')$('savedMsg').textContent='';
+  ['E','R','S'].forEach(x=>{$('pg'+x).hidden=x!==k;$('tab'+x).classList.toggle('on',x===k)});
+  if(k==='R'){reportOps();
+    if(!$('rfrom').value&&records.length){const all=records.flatMap(r=>[r.from,r.to]).sort();$('rfrom').value=all[0];$('rto').value=all[all.length-1]}
+    renderReport()}
+  if(k==='S')renderSaved();
+  if(k==='E'){renderGrid();update()}
+}
+$('tabE').onclick=()=>showTab('E');$('tabR').onclick=()=>showTab('R');$('tabS').onclick=()=>showTab('S');
+
+/* ---------- wiring ---------- */
+$('op').addEventListener('input',()=>{cur.op=$('op').value;$('merr').textContent='';markDirty()});
+$('dfrom').addEventListener('change',()=>{cur.from=$('dfrom').value;markDirty();renderGrid();update()});
+$('dto').addEventListener('change',()=>{cur.to=$('dto').value;markDirty();renderGrid();update()});
+$('mach').addEventListener('input',()=>{
+  const before=machList(cur);cur.mach=$('mach').value;const after=machList(cur);
+  cur.rules.forEach(r=>{if(r.set){const s=new Set(r.set);r.set=after.filter(m=>s.has(m)||!before.includes(m))}});
+  markDirty();renderGrid();renderRules();update();
+});
+$('lossmode').addEventListener('input',()=>{cur.lossmode=$('lossmode').value;markDirty();update()});
+$('paydate').addEventListener('input',()=>{cur.paydate=$('paydate').value;markDirty();update()});
+$('addrule').onclick=()=>{cur.rules.push({rate:'',from:'',to:'',set:null});markDirty();renderRules();update()};
+$('addloss').onclick=()=>{cur.loss.push({t:'',a:''});renderList('loss',cur.loss)};
+$('addadv').onclick=()=>{cur.adv.push({t:'',a:''});renderList('adv',cur.adv)};
+$('save').onclick=()=>doSave(false);
+$('saveNew').onclick=()=>doSave(true);
+$('newE').onclick=()=>{if(dirty&&!confirm('Discard unsaved changes and start a new entry?'))return;cur=blank();dirty=false;fillForm()};
+$('print').onclick=()=>window.print();$('printR').onclick=()=>window.print();
+['rfrom','rto','rop'].forEach(id=>$(id).addEventListener('input',renderReport));
+[['rpm','s_rpm'],['min','s_min'],['pick','s_pick'],['inch','s_inch']].forEach(([k,id])=>
+  $(id).addEventListener('input',()=>{const v=parseFloat($(id).value);if(!isNaN(v)&&v>=0){settings[k]=v;store.set('ppc_settings',settings);renderReport()}}));
+window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
+
+
+/* ---------- voice entry ---------- */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let recog=null,voiceOn=false,vpos=null;
+const vstat=s=>{$('vstat').textContent=s};
+$('grid').addEventListener('focusin',e=>{if(e.target.matches&&e.target.matches('input'))vpos={d:e.target.dataset.d,m:e.target.dataset.m}});
+const cellAt=p=>p?$('grid').querySelector('input[data-d="'+p.d+'"][data-m="'+p.m+'"]'):null;
+function vMove(inp){
+  if(!inp)return;
+  inp.focus();try{inp.scrollIntoView({block:'center',behavior:'smooth'})}catch(e){}
+}
+function setVoiceMode(on){$('grid').classList.toggle('voice',on);$('grid').querySelectorAll('input').forEach(i=>on?i.setAttribute('inputmode','none'):i.setAttribute('inputmode','decimal'))}
+function vStep(dir){ // returns false when column ended
+  const cur_=cellAt(vpos);if(!cur_)return false;
+  const col=[...$('grid').querySelectorAll('input[data-c="'+cur_.dataset.c+'"]')],i=col.indexOf(cur_)+dir;
+  if(i>=0&&i<col.length){vMove(col[i]);return true}
+  if(dir>0&&$('vnext').checked){const nx=$('grid').querySelector('input[data-c="'+(+cur_.dataset.c+1)+'"]');if(nx){vMove(nx);return true}}
+  return false;
+}
+const pauseMs=()=>Math.max(200,Math.min(5000,(parseFloat($('vpause').value)||0.5)*1000));
+$('vpause').value=store.get('ppc_pause',0.5);
+$('vpause').addEventListener('input',()=>{const v=parseFloat($('vpause').value);if(v>0)store.set('ppc_pause',v)});
+const DEV='०१२३४५६७८९';
+function vHandle(raw){
+  let text=raw.toLowerCase().replace(/[०-९]/g,c=>DEV.indexOf(c));
+  const re=/(\d+(?:[.,]\d+)?)|(skip|next|blank|aage|आगे|छोड़|छोड|chhod|khali|खाली)|(back|previous|peeche|पीछे)|(stop|band|बंद)/g;
+  let m,heard=[];
+  while((m=re.exec(text))){
+    const inp=cellAt(vpos);if(!inp){vstat('Tap a box first');return}
+    if(m[1]){
+      const val=m[1].replace(',','.');
+      inp.value=val;inp.dispatchEvent(new Event('input',{bubbles:true}));heard.push(val);
+      if(!vStep(1)){stopVoice('Column finished at '+dshow(inp.dataset.d)+' (machine '+inp.dataset.m+')');return}
+    }else if(m[2]){heard.push('skip');if(!vStep(1)){stopVoice('Column finished');return}}
+    else if(m[3]){heard.push('back');vStep(-1)}
+    else if(m[4]){stopVoice('Voice stopped');return}
+  }
+  if(heard.length){const n=cellAt(vpos);vstat('🎤 Heard: '+heard.join(', ')+(n?'  → now Machine '+n.dataset.m+', '+dshow(n.dataset.d):''))}
+  else vstat('🎤 Heard “'+raw+'” — say a number');
+}
+function startVoice(){
+  if(!SR){vstat('Voice typing is not supported in this browser. Use Chrome (Android / desktop) or Edge.');return}
+  if(!cellAt(vpos)){const first=$('grid').querySelector('input');if(!first){vstat('Choose dates and machines first');return}vpos={d:first.dataset.d,m:first.dataset.m}}
+  recog=new SR();recog.lang=$('vlang').value;recog.continuous=false;recog.interimResults=true;
+  let seg={},timer=null;
+  const rest=(i,txt)=>{const c=seg[i]||'';return (c&&txt.startsWith(c)?txt.slice(c.length):txt).trim()};
+  const commit=(i,txt)=>{const r=rest(i,txt);seg[i]=txt;if(r){vHandle(r);try{navigator.vibrate&&navigator.vibrate(25)}catch(e){}}};
+  recog.onresult=e=>{
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const res=e.results[i],txt=res[0].transcript;
+      clearTimeout(timer);
+      if(!res.isFinal&&txt.trim())vstat('👂 hearing: '+txt.trim());
+      if(res.isFinal){commit(i,txt)}
+      else if(rest(i,txt)){ // pause after speaking = this entry is complete
+        timer=setTimeout(()=>{if(voiceOn)commit(i,txt)},pauseMs());
+      }
+    }
+  };
+  recog.onstart=()=>{seg={}};
+  recog.onerror=e=>{
+    if(e.error==='no-speech'||e.error==='aborted')return;
+    if(e.error==='not-allowed'||e.error==='service-not-allowed')stopVoice('Microphone permission denied. Allow the mic for this site and try again.');
+    else if(e.error==='network')stopVoice('Voice needs internet connection.');
+    else stopVoice('Voice error: '+e.error);
+  };
+  recog.onend=()=>{clearTimeout(timer);if(voiceOn)setTimeout(()=>{if(voiceOn){try{recog.start()}catch(e){}}},60)};
+  voiceOn=true;$('mic').classList.add('on');$('mic').textContent='⏹ Stop voice';setVoiceMode(true);
+  try{recog.start()}catch(e){}
+  const c=cellAt(vpos);vMove(c);
+  vstat('🎤 Listening… Machine '+c.dataset.m+', '+dshow(c.dataset.d)+' — speak the number');
+}
+function stopVoice(msg){
+  voiceOn=false;if(recog){try{recog.stop()}catch(e){}}
+  $('mic').classList.remove('on');$('mic').textContent='🎤 Voice entry';setVoiceMode(false);
+  vstat(msg||'Voice stopped');
+}
+$('mic').addEventListener('mousedown',e=>e.preventDefault()); // keep focus on the selected box
+$('mic').addEventListener('click',()=>voiceOn?stopVoice():startVoice());
+$('vlang').addEventListener('change',()=>{if(voiceOn){stopVoice();startVoice()}});
+if(!SR)vstat('Voice typing needs Chrome / Edge. Typing works everywhere.');
+const _rg=renderGrid;renderGrid=function(){_rg();if(voiceOn)setVoiceMode(true)};
+
+/* ---------- import from photo ---------- */
+const AI_DEF={provider:'gemini',key:'',model:''};
+const AI_MODELS={gemini:'gemini-2.5-flash',claude:'claude-sonnet-5-5'};
+const AI_HELP={gemini:'Get a key at aistudio.google.com/apikey (Gemini has a free tier; limits can change).',claude:'Get a key at console.anthropic.com (pay-as-you-go API credit, separate from a claude.ai subscription; a scan costs a few cents).'};
+const aiCfg=()=>Object.assign({},AI_DEF,store.get('ppc_ai',{}));
+const IMP_PROMPT=`You are reading a photo of a handwritten MONTHLY PRODUCTION SHEET from a textile powerloom unit (pink paper, printed in Gujarati). Extract the handwritten data exactly as written.
+
+LAYOUT
+- At the top there are two machine blocks side by side (left block, right block). The machine number of each block is handwritten and circled near the top (a handwritten "1" and "5" can look like "L" and "S"). Return it as an integer.
+- Under each block there are TWO columns of handwritten numbers. Each of the two columns belongs to a different operator. The name row ("નામ") holds two handwritten names or initials, one above each column: first name = first column, second name = second column. Ignore the printed column titles (I પાળી, I બદલી, II પાળી, II બદલી, રીમાર્ક) and ignore any other empty column.
+- One row per date. The date column on the far left uses Gujarati numerals (૧=1 ૨=2 ૩=3 ૪=4 ૫=5 ૬=6 ૭=7 ૮=8 ૯=9, ૧૦=10, ૧૧=11 ... ૩૦=30, ૩૧=31). Rows 1-15 are in the upper table, then a blank total row (ફુલ), then rows 16-31 in the lower table. In the lower table the columns can sit a little further right than in the upper table: still use each block's two number columns (the right block's two columns are the last two columns that contain numbers). Names may be written again above the first rows of the lower table (e.g. a crossed-out name replaced by a new one): use the final, not-crossed-out name for days 16-31.
+- Values are meters of cloth (usually 15-40). A dash or an empty cell means no production: return null. If a number is crossed out or overwritten, return the final corrected value. If a cell contains text instead of a number (for example "BF"), return that text as a string. Never calculate totals.
+- Do not invent data. If you are not sure about a cell, give your best reading and list the cell in "uncertain".
+
+OUTPUT: one JSON object only, no markdown, no commentary:
+{"month": <1-12 or null>, "year": <4 digit year or null>,
+ "machines": [ {"machine": <int>, "rows": {"1":[col1,col2], "2":[col1,col2], ... "31":[col1,col2]}}, {"machine": <int>, "rows": {...}} ],
+ "operators": {"days_1_15": [name1, name2], "days_16_31": [name1, name2]},
+ "uncertain": [[machine, day, column (1 or 2)], ...]}
+The first machine is the left block, the second the right block. Include every day 1 to 31 in rows (use [null,null] for an empty row). Month and year: only if clearly written on the sheet, otherwise null.`;
+
+let imp=null,impTimer=null;
+const emptyVals=()=>{const v=[];for(let d=0;d<=31;d++)v.push([['',''],['','']]);return v};
+const impDays=()=>new Date(imp.y,imp.m,0).getDate();
+const impIso=d=>imp.y+'-'+String(imp.m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+function impStat(t){$('impStat').textContent=t}
+
+function drawScaled(src,w,h,rot,max){
+  const sc=Math.min(1,max/Math.max(w,h)),cw=Math.round(w*sc),ch=Math.round(h*sc);
+  const c=document.createElement('canvas');
+  if(rot%180){c.width=ch;c.height=cw}else{c.width=cw;c.height=ch}
+  const x=c.getContext('2d');x.translate(c.width/2,c.height/2);x.rotate(rot*Math.PI/180);x.drawImage(src,-cw/2,-ch/2,cw,ch);
+  return c.toDataURL('image/jpeg',0.9);
+}
+async function fileToUrl(file){
+  let src,w,h;
+  try{src=await createImageBitmap(file,{imageOrientation:'from-image'});w=src.width;h=src.height}
+  catch(e){src=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=URL.createObjectURL(file)});w=src.naturalWidth;h=src.naturalHeight}
+  const url=drawScaled(src,w,h,0,2400);
+  try{return await autoCrop(url)}catch(e){return url}
+}
+/* crop the photo to the pink sheet (more pixels on the handwriting; easier to compare). Falls back to the full photo. */
+async function autoCrop(url){
+  const im=await loadImg(url),W=im.naturalWidth,H=im.naturalHeight,sc=Math.min(1,400/Math.max(W,H));
+  const sw=Math.max(1,Math.round(W*sc)),sh=Math.max(1,Math.round(H*sc));
+  const c=document.createElement('canvas');c.width=sw;c.height=sh;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(im,0,0,sw,sh);
+  const d=x.getImageData(0,0,sw,sh).data,xs=[],ys=[];
+  for(let j=0;j<sh;j++)for(let i=0;i<sw;i++){const k=(j*sw+i)*4,r=d[k],g=d[k+1],b=d[k+2];if(r>140&&r-g>45&&r-b>15){xs.push(i);ys.push(j)}}
+  if(xs.length<sw*sh*0.08)return url;                                   // no clear pink sheet found
+  xs.sort((a,b)=>a-b);ys.sort((a,b)=>a-b);const q=(a,f)=>a[Math.min(a.length-1,Math.floor(a.length*f))];
+  let x0=q(xs,0.01),x1=q(xs,0.99),y0=q(ys,0.01),y1=q(ys,0.99);
+  const mx=(x1-x0)*0.04,my=(y1-y0)*0.03;
+  x0=Math.max(0,x0-mx);x1=Math.min(sw,x1+mx);y0=Math.max(0,y0-my);y1=Math.min(sh,y1+my);
+  if((x1-x0)*(y1-y0)>sw*sh*0.85)return url;                              // sheet already fills the photo
+  const f=1/sc,cx=Math.round(x0*f),cy=Math.round(y0*f),cw=Math.round((x1-x0)*f),ch=Math.round((y1-y0)*f);
+  const o=document.createElement('canvas');o.width=cw;o.height=ch;o.getContext('2d').drawImage(im,cx,cy,cw,ch,0,0,cw,ch);
+  return o.toDataURL('image/jpeg',0.92);
+}
+function loadImg(url){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url})}
+
+function openImport(url){
+  const dm=new Date();dm.setDate(1);dm.setMonth(dm.getMonth()-1);   // sheets arrive after month end -> default previous month
+  imp={img:url,zoom:120,y:dm.getFullYear(),m:dm.getMonth()+1,mach:['',''],names:[['',''],['','']],vals:emptyVals(),unc:new Set(),edited:false,busy:false};
+  $('impImg').src=url;impZoom(0);
+  $('impMon').value=imp.m;$('impYr').value=imp.y;$('impM0').value='';$('impM1').value='';
+  $('impErr').textContent='';
+  impRender();impSummary();
+  if(!$('impDlg').open)$('impDlg').showModal();
+  if(aiCfg().key)impScan();
+  else impStat('No AI key yet. Press “⚙ AI key” to set one, or type the figures yourself while looking at the photo.');
+}
+function impZoom(dz){imp.zoom=Math.max(40,Math.min(400,imp.zoom+dz));$('impImg').style.width=imp.zoom+'%';$('impZv').textContent=imp.zoom+'%'}
+
+/* ----- AI call ----- */
+async function aiRead(url){
+  const cfg=aiCfg();if(!cfg.key.trim())throw new Error('Add your API key first (⚙ AI key).');
+  const b64=url.split(',')[1],model=(cfg.model||'').trim()||AI_MODELS[cfg.provider];
+  const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),150000);
+  try{
+    let res,j;
+    if(cfg.provider==='claude'){
+      res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',signal:ctl.signal,
+        headers:{'content-type':'application/json','x-api-key':cfg.key.trim(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body:JSON.stringify({model,max_tokens:8000,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:IMP_PROMPT}]}]})});
+      if(!res.ok)throw new Error('Claude API error '+res.status+': '+(await res.text()).slice(0,300));
+      j=await res.json();return (j.content||[]).map(c=>c.text||'').join('');
+    }
+    res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(cfg.key.trim()),{method:'POST',signal:ctl.signal,
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({contents:[{role:'user',parts:[{text:IMP_PROMPT},{inline_data:{mime_type:'image/jpeg',data:b64}}]}],generationConfig:{temperature:0,responseMimeType:'application/json'}})});
+    if(!res.ok)throw new Error('Gemini API error '+res.status+': '+(await res.text()).slice(0,300));
+    j=await res.json();
+    return ((j.candidates||[])[0]?.content?.parts||[]).map(p=>p.text||'').join('');
+  }finally{clearTimeout(to)}
+}
+function parseAiJson(t){
+  t=String(t).replace(/```json|```/g,'');const a=t.indexOf('{'),b=t.lastIndexOf('}');
+  if(a<0||b<a)throw new Error('The AI reply did not contain readable data.');
+  return JSON.parse(t.slice(a,b+1));
+}
+const cellStr=v=>{if(v==null)return '';const t=String(v).trim();return /^[-–—_.·\s]*$/.test(t)?'':t};
+function impApply(j){
+  if(j.year>=2000&&j.year<=2100&&j.month>=1&&j.month<=12){imp.y=j.year|0;imp.m=j.month|0;$('impMon').value=imp.m;$('impYr').value=imp.y}
+  imp.vals=emptyVals();imp.unc=new Set();imp.mach=['',''];
+  const ms=(j.machines||[]).slice(0,2);
+  ms.forEach((mo,mi)=>{
+    const n=parseInt(mo.machine);imp.mach[mi]=isNaN(n)?'':String(n);
+    const rows=mo.rows||{};
+    for(let d=1;d<=31;d++){const r=rows[d]||rows[String(d)]||[];for(let c=0;c<2;c++)imp.vals[d][mi][c]=cellStr(r[c])}
+  });
+  const o=j.operators||{},a=o.days_1_15||[],b=o.days_16_31||[];
+  imp.names=[[cellStr(a[0]),cellStr(a[1])],[cellStr(b[0])||cellStr(a[0]),cellStr(b[1])||cellStr(a[1])]];
+  (j.uncertain||[]).forEach(u=>{const mi=ms.findIndex(x=>x.machine==u[0]);if(mi>=0)imp.unc.add(u[1]+':'+mi+':'+(u[2]-1))});
+  $('impM0').value=imp.mach[0];$('impM1').value=imp.mach[1];
+}
+async function impScan(){
+  if(imp.busy)return;
+  if(imp.edited&&!confirm('Replace the figures you typed / corrected with a fresh AI reading?'))return;
+  imp.busy=true;$('impScan').disabled=true;$('impErr').textContent='';
+  const t0=Date.now();clearInterval(impTimer);
+  impTimer=setInterval(()=>impStat('⏳ Reading the sheet… '+Math.round((Date.now()-t0)/1000)+' s (usually 10–40 s)'),500);
+  impStat('⏳ Reading the sheet…');
+  try{
+    const txt=await aiRead(imp.img);
+    impApply(parseAiJson(txt));imp.edited=false;
+    impRender();impSummary();
+    impStat('✓ Done. Check every number against the photo — yellow cells are the ones the AI was unsure about.');
+  }catch(e){
+    impStat('');$('impErr').textContent=(e.name==='AbortError'?'Timed out. Try again.':String(e.message||e));
+  }finally{clearInterval(impTimer);imp.busy=false;$('impScan').disabled=false}
+}
+
+/* ----- review table ----- */
+function impCls(t){
+  const v=parseFloat(t.value);
+  t.classList.toggle('nb',t.value.trim()!==''&&isNaN(v));
+  t.classList.toggle('vhi',v>50);
+}
+function impRender(){
+  const nd=impDays(),M=imp.mach,lab=i=>M[i]?'M'+M[i]:'M?';
+  let h='<table class="imptbl"><thead><tr><th>Day</th>';
+  for(let c=0;c<2;c++)for(let mi=0;mi<2;mi++)h+='<th>Col '+(c+1)+'<br>'+lab(mi)+' <span class="tag">'+(mi?'right':'left')+'</span></th>';
+  h+='</tr></thead><tbody>';
+  const half=(hh,t)=>{h+='<tr class="half"><td colspan="5">'+t+'</td></tr><tr class="half"><td>Name</td>'+
+    [0,1].map(c=>'<td colspan="2"><input class="nm" type="text" list="ops" placeholder="Operator – column '+(c+1)+'" data-n="'+hh+':'+c+'" value="'+esc(imp.names[hh][c])+'"></td>').join('')+'</tr>'};
+  for(let d=1;d<=nd;d++){
+    if(d===1)half(0,'Days 1 – 15');
+    if(d===16)half(1,'Days 16 – '+nd);
+    h+='<tr><td>'+d+'</td>';
+    for(let c=0;c<2;c++)for(let mi=0;mi<2;mi++){
+      const key=d+':'+mi+':'+c,v=imp.vals[d][mi][c];
+      h+='<td class="in"><input type="text" inputmode="decimal" data-d="'+d+'" data-mi="'+mi+'" data-c="'+c+'" value="'+esc(v)+'" class="'+(imp.unc.has(key)?'unc':'')+'"></td>';
+    }
+    h+='</tr>';
+  }
+  h+='</tbody></table>';
+  $('impTbl').innerHTML=h;
+  $('impTbl').querySelectorAll('input[data-d]').forEach(impCls);
+}
+
+/* ----- build entries from the reviewed table ----- */
+function impBuild(){
+  const nd=impDays(),M=imp.mach.map(x=>{const n=parseInt(x);return isNaN(n)?null:n});
+  const groups=new Map(),missing=[];
+  for(let hh=0;hh<2;hh++){
+    const d0=hh?16:1,d1=hh?nd:15;
+    for(let c=0;c<2;c++){
+      const prod={},ms=new Set();let any=false;
+      for(let d=d0;d<=d1;d++)for(let mi=0;mi<2;mi++){
+        if(M[mi]==null)continue;
+        const v=parseFloat(imp.vals[d][mi][c]);if(isNaN(v))continue;
+        (prod[impIso(d)]=prod[impIso(d)]||{})[M[mi]]=String(v);ms.add(M[mi]);any=true;
+      }
+      if(!any)continue;
+      const nm=(imp.names[hh][c]||'').trim();
+      if(!nm){missing.push('column '+(c+1)+', days '+d0+'–'+d1);continue}
+      const k=nm.toLowerCase();let g=groups.get(k);
+      if(!g){g={op:nm,from:impIso(d0),to:impIso(d1),prod:{},ms:new Set()};groups.set(k,g)}
+      if(impIso(d0)<g.from)g.from=impIso(d0);if(impIso(d1)>g.to)g.to=impIso(d1);
+      for(const dt in prod){g.prod[dt]=Object.assign(g.prod[dt]||{},prod[dt])}
+      ms.forEach(x=>g.ms.add(x));
+    }
+  }
+  const recs=[...groups.values()].map(g=>{
+    let m=0;for(const dt in g.prod)for(const k in g.prod[dt])m+=parseFloat(g.prod[dt][k]);
+    return {op:g.op,from:g.from,to:g.to,prod:g.prod,mach:[...g.ms].sort((a,b)=>a-b).join(','),meters:m,cells:Object.values(g.prod).reduce((s,o)=>s+Object.keys(o).length,0)};
+  });
+  return {recs,missing,M};
+}
+function impSummary(){
+  const {recs,missing,M}=impBuild();let h='',err='';
+  if(M[0]==null&&M[1]==null)err='Enter the machine number(s) at the top.';
+  else if(M[0]!=null&&M[0]===M[1])err='Left and right machine numbers are the same.';
+  recs.forEach(r=>{
+    const dup=records.some(x=>x.op.trim().toLowerCase()===r.op.toLowerCase()&&x.from===r.from&&x.to===r.to);
+    h+='<div><b>'+esc(r.op)+'</b> · '+dshow(r.from)+' → '+dshow(r.to)+' · machines '+esc(r.mach)+' · '+f2(r.meters)+' m ('+r.cells+' entries)'+(dup?' <span style="color:var(--warn)">⚠ already saved – figures will be updated</span>':'')+'</div>';
+  });
+  if(!recs.length&&!missing.length&&!err)h='<div class="tag">No figures yet.</div>';
+  if(missing.length&&!err)err='Type the operator name for: '+missing.join('; ')+'.';
+  $('impSum').innerHTML=h;$('impErr').textContent=imp.busy?'':err;
+  $('impSave').textContent='Save '+recs.length+(recs.length===1?' entry':' entries');
+  $('impSave').disabled=!recs.length||!!err;
+}
+function impSave(){
+  const {recs,missing}=impBuild();if(!recs.length||missing.length)return;
+  const same=(x,r)=>x.op.trim().toLowerCase()===r.op.toLowerCase()&&x.from===r.from&&x.to===r.to;
+  const dups=recs.filter(r=>records.some(x=>same(x,r)));
+  if(dups.length&&!confirm(dups.length+' entr'+(dups.length>1?'ies':'y')+' for the same operator and dates already exist. OK = update their production figures (rates, loss and advance are kept). Cancel = go back.'))return;
+  const now=new Date().toISOString();
+  recs.forEach(r=>{
+    const ex=records.find(x=>same(x,r));
+    if(ex){ex.prod=r.prod;ex.mach=r.mach;ex.saved=now;return}
+    const rec=blank();rec.id='r'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+    rec.op=r.op;rec.from=r.from;rec.to=r.to;rec.mach=r.mach;rec.prod=r.prod;rec.saved=now;records.push(rec);
+  });
+  store.set('ppc_records',records);fillOps();
+  imp.edited=false;$('impDlg').close();
+  showTab('S');$('savedMsg').textContent='✓ Saved '+recs.length+' entr'+(recs.length>1?'ies':'y')+' from the photo. Open an entry to set the rate, loss and advance.';
+}
+function impClose(){
+  if(imp&&imp.edited&&!confirm('Close without saving? Your corrections will be lost.'))return;
+  $('impDlg').close();
+}
+
+/* ----- wiring ----- */
+$('impBtn').onclick=()=>$('impFile').click();
+$('impFile').addEventListener('change',async()=>{
+  const f=$('impFile').files[0];$('impFile').value='';if(!f)return;
+  try{openImport(await fileToUrl(f))}catch(e){alert('Could not open that image.')}
+});
+$('impClose').onclick=impClose;$('impCancel').onclick=impClose;
+$('impDlg').addEventListener('cancel',e=>{if(imp&&imp.edited&&!confirm('Close without saving? Your corrections will be lost.'))e.preventDefault()});
+$('impScan').onclick=impScan;$('impSave').onclick=impSave;
+$('impZm').onclick=()=>impZoom(-20);$('impZp').onclick=()=>impZoom(20);
+$('impRot').onclick=async()=>{
+  if(imp.edited||imp.busy)return alert('Rotate before reading / typing the figures.');
+  const i=await loadImg(imp.img);imp.img=drawScaled(i,i.naturalWidth,i.naturalHeight,90,2400);$('impImg').src=imp.img;
+};
+$('impMon').addEventListener('change',()=>{imp.m=+$('impMon').value;impRender();impSummary()});
+$('impYr').addEventListener('input',()=>{const y=parseInt($('impYr').value);if(y>=2000&&y<=2100){imp.y=y;impRender();impSummary()}});
+[0,1].forEach(i=>$('impM'+i).addEventListener('input',()=>{imp.mach[i]=$('impM'+i).value;impRender();impSummary()}));
+$('impTbl').addEventListener('input',e=>{
+  const t=e.target;imp.edited=true;
+  if(t.dataset.n){const [hh,c]=t.dataset.n.split(':');imp.names[hh][c]=t.value}
+  else if(t.dataset.d){imp.vals[t.dataset.d][t.dataset.mi][t.dataset.c]=t.value;imp.unc.delete(t.dataset.d+':'+t.dataset.mi+':'+t.dataset.c);t.classList.remove('unc');impCls(t)}
+  impSummary();
+});
+$('impTbl').addEventListener('keydown',e=>{
+  const t=e.target;if(e.key!=='Enter'||!t.matches||!t.matches('input[data-d]'))return;e.preventDefault();
+  const all=[...$('impTbl').querySelectorAll('input[data-d][data-mi="'+t.dataset.mi+'"][data-c="'+t.dataset.c+'"]')],n=all[all.indexOf(t)+1];
+  if(n){n.focus();n.select()}
+});
+$('impTbl').addEventListener('focusin',e=>{if(e.target.matches&&e.target.matches('input[data-d]'))e.target.select()});
+
+/* AI settings */
+function openAi(){const c=aiCfg();$('aiProv').value=c.provider;$('aiKey').value=c.key;$('aiModel').value=c.model;aiHelp();$('aiDlg').showModal()}
+function aiHelp(){const p=$('aiProv').value;$('aiModel').placeholder=AI_MODELS[p];$('aiHelp').textContent=AI_HELP[p]}
+$('impSet').onclick=openAi;$('aiProv').addEventListener('change',aiHelp);
+$('aiCancel').onclick=()=>$('aiDlg').close();
+$('aiSave').onclick=()=>{
+  store.set('ppc_ai',{provider:$('aiProv').value,key:$('aiKey').value.trim(),model:$('aiModel').value.trim()});
+  $('aiDlg').close();
+  if(imp&&$('impDlg').open&&!imp.edited&&aiCfg().key)impScan();
+};
+
+setSettings();fillOps();fillForm();
+if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
